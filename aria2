@@ -1,16 +1,203 @@
-# Updated aria2 script
+#!/bin/bash
+mkdir -p "$HOME/.config/aria2dl"
 
-# Initialize EXTRA_ARGS for additional command line arguments
-EXTRA_ARGS=""
+# Logic for flag file
+FLAGS_FILE="$HOME/.config/aria2dl/flags"
+[[ ! -f "$FLAGS_FILE" ]] && touch "$FLAGS_FILE"
 
-# Fixed script to correct the malformed ending
-...
+# Logic for addflag / removeflag
+if [[ "$1" == "addflag" ]]; then
+  SCRIPT_FLAG="$2"
+  ARIA2C_FLAG="$4"  # $3 is "for"
+  if [[ -z "$SCRIPT_FLAG" || -z "$ARIA2C_FLAG" ]]; then
+    echo "Usage: aria2 addflag <scriptflag> for <aria2cflag>"
+    exit 1
+  fi
+  grep -q "^$SCRIPT_FLAG:" "$FLAGS_FILE" && { echo "Flag exists, remove it first."; exit 1; }
+  echo "$SCRIPT_FLAG:$ARIA2C_FLAG" >> "$FLAGS_FILE"
+  echo "Added: $SCRIPT_FLAG -> $ARIA2C_FLAG"; exit 0
+fi
 
-# Improved error handling
-...
+if [[ "$1" == "removeflag" ]]; then
+  SCRIPT_FLAG="$2"
+  grep -v "^$SCRIPT_FLAG:" "$FLAGS_FILE" > "${FLAGS_FILE}.tmp" && mv "${FLAGS_FILE}.tmp" "$FLAGS_FILE"
+  echo "Removed: $SCRIPT_FLAG"; exit 0
+fi
 
-# Added gzip compression flag to the aria2c command
-aria2c --compression gzip $EXTRA_ARGS
+# --- Defaults & Hardcoded Paths ---
+# We check if they exist at the hardcoded path; if not, we use 'command -v' as a fallback.
+CURL="/usr/bin/curl"
+[[ ! -x "$CURL" ]] && CURL=$(command -v curl)
 
-# Ensure temporary files are removed to prevent collisions
-...
+WGET="/usr/bin/wget" 
+[[ ! -x "$WGET" ]] && WGET=$(command -v wget)
+
+ARIA2C="/usr/bin/aria2c"
+[[ ! -x "$ARIA2C" ]] && ARIA2C=$(command -v aria2c)
+
+FILEPATH="$HOME"
+CHECK_CERT=true
+DOWNLOAD_LIMIT="750K"
+UPLOAD_LIMIT="1M"
+STREAMS=12
+MAX_SCRIPT_TRIES=3
+CONTINUE=false
+URI_SELECTOR=feedback
+FILE_ALLOCATION=falloc
+SAVING_INTERVAL=5
+ALLOW_OVERWRITE=true
+TIMEOUT=600
+RETRY_WAIT=8
+MAX_TRIES_INSIDE_ARIA2C=600
+NTFY_TOPIC=download_on_pc
+CONFIG_FILE="$HOME/.config/aria2dl/config"
+NTFY_ENABLED=true
+DOWNLOAD_ALL=false
+COMPRESSION=true
+URL=""
+EXTRA_ARGS=()
+
+# Load config if exists (this allows overrides)
+[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+
+# Parse flags
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --check-certificate=*) CHECK_CERT="${1#*=}" ;;
+    --download-limit=*)    DOWNLOAD_LIMIT="${1#*=}" ;;
+    --upload-limit=*)      UPLOAD_LIMIT="${1#*=}" ;;
+    --streams=*)           STREAMS="${1#*=}" ;;
+    --max-script-attempts=*) MAX_SCRIPT_TRIES="${1#*=}" ;;
+    --filepath=*)          FILEPATH="${1#*=}" ;;
+    --file-allocation=*)   FILE_ALLOCATION="${1#*=}" ;;
+    --timeout=*)           TIMEOUT="${1#*=}" ;;
+    --uri-selector=*)      URI_SELECTOR="${1#*=}" ;;
+    --max-tries-inside-aria2=*) MAX_TRIES_INSIDE_ARIA2C="${1#*=}" ;;
+    --retry-inside-aria2-wait=*) RETRY_WAIT="${1#*=}" ;;
+    --saving-interval=*)   SAVING_INTERVAL="${1#*=}" ;;
+    --allow-overwrite=*)   ALLOW_OVERWRITE="${1#*=}" ;;
+    --ntfy-topic=*)        NTFY_TOPIC="${1#*=}" ;;
+    --ntfy-enabled=*)      NTFY_ENABLED="${1#*=}" ;;
+    --curl-path=*)         CURL="${1#*=}" ;;
+    --wget-path=*)         WGET="${1#*=}" ;;
+    --aria2-path=*)        ARIA2C="${1#*=}" ;; 
+    --continue=*)          CONTINUE="${1#*=}" ;;
+    --download-all-files=*) DOWNLOAD_ALL="${1#*=}" ;;
+    --http-accept-gzip=*)  COMPRESSION="${1#*=}" ;;
+    -c)                    CONTINUE="true" ;;
+    http*|ftp*|magnet*)    URL="$1" ;;
+    *)
+      MATCHED=false
+      while IFS=: read -r SFLAG AFLAG; do
+        if [[ "$1" == "$SFLAG" ]]; then
+          EXTRA_ARGS+=("$AFLAG")
+          MATCHED=true; break
+        fi
+      done < "$FLAGS_FILE"
+      [[ "$MATCHED" == false ]] && echo "Unknown flag: $1"
+      ;;
+  esac
+  shift
+done
+
+# Save back to config
+cat > "$CONFIG_FILE" <<EOF
+NTFY_TOPIC="$NTFY_TOPIC"
+STREAMS="$STREAMS"
+DOWNLOAD_LIMIT="$DOWNLOAD_LIMIT"
+UPLOAD_LIMIT="$UPLOAD_LIMIT"
+FILE_ALLOCATION="$FILE_ALLOCATION"
+TIMEOUT="$TIMEOUT"
+RETRY_WAIT="$RETRY_WAIT"
+MAX_TRIES_INSIDE_ARIA2C="$MAX_TRIES_INSIDE_ARIA2C"
+MAX_SCRIPT_TRIES="$MAX_SCRIPT_TRIES"
+SAVING_INTERVAL="$SAVING_INTERVAL"
+URI_SELECTOR="$URI_SELECTOR"
+NTFY_ENABLED="$NTFY_ENABLED"
+CURL="$CURL"
+ARIA2C="$ARIA2C"
+WGET="$WGET"
+COMPRESSION="$COMPRESSION"
+EOF
+
+# --- Helper Functions ---
+send_notification() {
+  [[ "$NTFY_ENABLED" != "true" ]] && return
+  "$CURL" -H "Title: $1" -H "Priority: default" -H "Tags: package,white_check_mark" -d "$2" "https://ntfy.sh/$NTFY_TOPIC"
+}
+
+crawl_urls() {
+  "$WGET" --spider -r -nd -nv --no-parent "$1" 2>&1 | grep -oP 'https?://\S+' | grep -v '/$' | sort -u
+}
+
+build_aria2_input() {
+  local base_url="${1%/}" dest_dir="$2" input_file="$3"
+  > "$input_file"
+  local count=0
+  while IFS= read -r link; do
+    local relative="${link#$base_url}"; relative="${relative#/}"
+    local fdir=$(dirname "$relative"); local fname=$(basename "$relative")
+    printf '%s\n  dir=%s/%s\n  out=%s\n\n' "$link" "$dest_dir" "$fdir" "$fname" >> "$input_file"
+    ((count++))
+  done < <(crawl_urls "$base_url")
+  echo "Found $count files."
+  [[ $count -gt 0 ]]
+}
+
+detect_folder_url() {
+  [[ "$1" == */ ]] && echo "true" && return
+  local effective
+  effective=$("$CURL" -sI -L -o /dev/null -w '%{url_effective}' "$1")
+  [[ "$effective" == */ ]] && echo "true" || echo "false"
+}
+
+# --- Execution ---
+if [[ -z "$URL" ]]; then echo "Error: No URL."; exit 1; fi
+
+# Path logic
+if [[ "$FILEPATH" == */ ]] || [[ -d "$FILEPATH" ]]; then
+  DIRPATH="${FILEPATH%/}"
+  OUTFILE=$(basename "${URL%%\?*}")
+else
+  DIRPATH=$(dirname "$FILEPATH")
+  OUTFILE=$(basename "$FILEPATH")
+fi
+
+mkdir -p "$DIRPATH"
+SESSION_FILE="$DIRPATH/aria2.session"
+LOGFILE="$DIRPATH/aria2.log"
+[[ "$CONTINUE" != "true" ]] && > "$SESSION_FILE"
+
+[[ "$DOWNLOAD_ALL" == "false" ]] && DOWNLOAD_ALL=$(detect_folder_url "$URL")
+
+ATTEMPT=0
+while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
+  ((ATTEMPT++))
+  
+  CMD=("$ARIA2C" -x "$STREAMS" -s "$STREAMS" --max-tries="$MAX_TRIES_INSIDE_ARIA2C" \
+       --retry-wait="$RETRY_WAIT" --timeout="$TIMEOUT" --check-certificate="$CHECK_CERT" \
+       --save-session="$SESSION_FILE" --save-session-interval="$SAVING_INTERVAL" \
+       --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION" \
+       --max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
+
+  if [[ "$DOWNLOAD_ALL" == "true" ]]; then
+    INPUT_FILE="$DIRPATH/crawl.txt"
+    build_aria2_input "$URL" "$DIRPATH" "$INPUT_FILE"
+    CMD+=(--input-file="$INPUT_FILE")
+  else
+    CMD+=(--dir="$DIRPATH" -o "$OUTFILE" "$URL")
+  fi
+  
+  # Add the custom flags
+  CMD+=("${EXTRA_ARGS[@]}")
+
+  echo "Attempt $ATTEMPT..." | tee -a "$LOGFILE"
+  if "${CMD[@]}"; then
+    send_notification "Success" "Downloaded $URL"
+    exit 0
+  fi
+  sleep 2
+done
+
+send_notification "Failed" "Download failed after $MAX_SCRIPT_TRIES attempts"
+exit 1
