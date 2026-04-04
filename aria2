@@ -127,28 +127,16 @@ done
 
 # Save back to config
 cat > "$CONFIG_FILE" <<EOF
+NTFY_TOPIC="$NTFY_TOPIC"
+...
+COMPRESSION="$COMPRESSION"
+EOF
+
 SURGE_CONFIG="$HOME/.config/surge/settings.json"
 if [[ -f "$SURGE_CONFIG" ]] && command -v jq &>/dev/null; then
   tmp=$(mktemp)
   jq --argjson c "$STREAMS" '.network.max_connections_per_host = $c' "$SURGE_CONFIG" > "$tmp" && mv "$tmp" "$SURGE_CONFIG"
 fi
-NTFY_TOPIC="$NTFY_TOPIC"
-STREAMS="$STREAMS"
-DOWNLOAD_LIMIT="$DOWNLOAD_LIMIT"
-UPLOAD_LIMIT="$UPLOAD_LIMIT"
-FILE_ALLOCATION="$FILE_ALLOCATION"
-TIMEOUT="$TIMEOUT"
-RETRY_WAIT="$RETRY_WAIT"
-MAX_TRIES_INSIDE_ARIA2C="$MAX_TRIES_INSIDE_ARIA2C"
-MAX_SCRIPT_TRIES="$MAX_SCRIPT_TRIES"
-SAVING_INTERVAL="$SAVING_INTERVAL"
-URI_SELECTOR="$URI_SELECTOR"
-NTFY_ENABLED="$NTFY_ENABLED"
-CURL="$CURL"
-ARIA2C="$ARIA2C"
-WGET="$WGET"
-COMPRESSION="$COMPRESSION"
-EOF
 
 # --- Helper Functions ---
 send_notification() {
