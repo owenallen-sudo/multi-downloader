@@ -77,6 +77,7 @@ ARIA2_SPEED_LIMITS=true
 CURL_SPEED_LIMITS=true
 WGET_SPEED_LIMITS=true
 GIT_SPEED_LIMITS=true
+GIT_DEPTH=""
 GITHUB_TOKEN=""
 GITHUB_BRANCH="main"
 GITHUB_REPO=""
@@ -116,6 +117,7 @@ while [[ "$#" -gt 0 ]]; do
     --use-curl) USE_CURL=true ;;
     --use-wget) USE_WGET=true ;;
     --use-git)             USE_GIT=true ;;
+    --depth=*) GIT_DEPTH="${1#*=}" ;;
     --git-path=*)          GIT="${1#*=}" ;;
     --github-token=*)      GITHUB_TOKEN="${1#*=}" ;;
     --github-branch=*)            GITHUB_BRANCH="${1#*=}" ;;
@@ -255,16 +257,24 @@ if [[ "$USE_GIT" == "true" ]] && [[ -n "$GITHUB_REPO" ]]; then
   if [[ "$GIT_SPEED_LIMITS" == "true" ]] && [[ -n "$TRICKLE" ]] && [[ -x "$TRICKLE" ]]; then
     GIT_CMD=("$TRICKLE" -d "$(to_kbps "$DOWNLOAD_LIMIT")" -u "$(to_kbps "$UPLOAD_LIMIT")" "$GIT")
   fi
-  if [[ -n "$GITHUB_TOKEN" ]]; then
-    AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
-    if "${GIT_CMD[@]}" clone --branch "$GITHUB_BRANCH" "$AUTH_URL" "$CLONE_DIR"; then
-      send_notification "Success" "Cloned $GITHUB_REPO"
+  if [[ -d "$CLONE_DIR/.git" ]]; then
+    if "${GIT_CMD[@]}" -C "$CLONE_DIR" fetch origin "$GITHUB_BRANCH" && \
+       "${GIT_CMD[@]}" -C "$CLONE_DIR" checkout "$GITHUB_BRANCH"; then
+      send_notification "Success" "Updated $GITHUB_REPO"
       exit 0
     fi
   else
-    if "${GIT_CMD[@]}" clone --branch "$GITHUB_BRANCH" "https://github.com/$GITHUB_REPO" "$CLONE_DIR"; then
-      send_notification "Success" "Cloned $GITHUB_REPO"
-      exit 0
+    if [[ -n "$GITHUB_TOKEN" ]]; then
+      AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
+      if "${GIT_CMD[@]}" clone ${GIT_DEPTH:+--depth="$GIT_DEPTH"} --branch "$GITHUB_BRANCH" "$AUTH_URL" "$CLONE_DIR"; then
+        send_notification "Success" "Cloned $GITHUB_REPO"
+        exit 0
+      fi
+    else
+      if "${GIT_CMD[@]}" clone ${GIT_DEPTH:+--depth="$GIT_DEPTH"} --branch "$GITHUB_BRANCH" "https://github.com/$GITHUB_REPO" "$CLONE_DIR"; then
+        send_notification "Success" "Cloned $GITHUB_REPO"
+        exit 0
+      fi
     fi
   fi
   
