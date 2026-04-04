@@ -90,7 +90,7 @@ while [[ "$#" -gt 0 ]]; do
     --download-all-files=*) DOWNLOAD_ALL="${1#*=}" ;;
     --http-accept-gzip=*)  COMPRESSION="${1#*=}" ;;
     -c)                    CONTINUE="true" ;;
-    http*|ftp*|magnet*)
+    http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
       if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
         URL="${1%/}/archive/refs/heads/main.zip"
       else
@@ -98,6 +98,10 @@ while [[ "$#" -gt 0 ]]; do
       fi
       ;;
     *)
+      if [[ "$1" == *"://"* ]]; then
+        URL="$1"
+        shift; continue
+      fi
       MATCHED=false
       while IFS=: read -r SFLAG AFLAG; do
         if [[ "$1" == "$SFLAG" ]]; then
