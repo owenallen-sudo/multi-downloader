@@ -90,6 +90,7 @@ while [[ "$#" -gt 0 ]]; do
     --curl-path=*)         CURL="${1#*=}" ;;
     --wget-path=*)         WGET="${1#*=}" ;;
     --aria2-path=*)        ARIA2C="${1#*=}" ;; 
+    --surge-path=*         SURGE="${1#*=}" ;;
     --continue=*)          CONTINUE="${1#*=}" ;;
     --download-all-files=*) DOWNLOAD_ALL="${1#*=}" ;;
     --http-accept-gzip=*)  COMPRESSION="${1#*=}" ;;
@@ -196,7 +197,7 @@ while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
 
   if [[ "$USE_ARIA2" != "true" ]] && [[ "$DOWNLOAD_ALL" != "true" ]] && \
      [[ "$URL" == http://* || "$URL" == https://* ]] && \
-     command -v "$SURGE" &>/dev/null; then
+     [[ -n "$SURGE" ]] && [[ -x "$SURGE" ]]; then
     echo "Attempt $ATTEMPT (surge)..." | tee -a "$LOGFILE"
     if "$SURGE" "$URL" -o "$DIRPATH/$OUTFILE" --exit-when-done; then
       send_notification "Success" "Downloaded $URL"
