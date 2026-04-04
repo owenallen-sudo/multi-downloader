@@ -63,6 +63,8 @@ NTFY_ENABLED=true
 DOWNLOAD_ALL=false
 COMPRESSION=true
 USE_ARIA2=false
+USE_CURL=false
+USE_WGET=false
 URL=""
 EXTRA_ARGS=()
 
@@ -95,6 +97,8 @@ while [[ "$#" -gt 0 ]]; do
     --download-all-files=*) DOWNLOAD_ALL="${1#*=}" ;;
     --http-accept-gzip=*)  COMPRESSION="${1#*=}" ;;
     --use-aria2) USE_ARIA2=true ;;
+    --use-curl) USE_CURL=true ;;
+    --use-wget) USE_WGET=true ;;
     -c)                    CONTINUE="true" ;;
     http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
       if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
@@ -200,7 +204,19 @@ ATTEMPT=0
 while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
   ((ATTEMPT++))
 
-  if [[ "$USE_ARIA2" != "true" ]] && [[ "$DOWNLOAD_ALL" != "true" ]] && \
+  if [[ "$USE_CURL" == "true" ]]; then
+    echo "Attempt $ATTEMPT (curl)..." | tee -a "$LOGFILE"
+    if "$CURL" -L --output "$DIRPATH/$OUTFILE" "$URL"; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+  elif [[ "$USE_WGET" == "true" ]]; then
+    echo "Attempt $ATTEMPT (wget)..." | tee -a "$LOGFILE"
+    if "$WGET" -O "$DIRPATH/$OUTFILE" "$URL"; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+  elif [[ "$USE_ARIA2" != "true" ]] && [[ "$DOWNLOAD_ALL" != "true" ]] && \
      [[ "$URL" == http://* || "$URL" == https://* ]] && \
      [[ -n "$SURGE" ]] && [[ -x "$SURGE" ]]; then
     echo "Attempt $ATTEMPT (surge)..." | tee -a "$LOGFILE"
