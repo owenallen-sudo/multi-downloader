@@ -46,6 +46,9 @@ SURGE="/usr/bin/surge"
 GIT="/usr/bin/git"
 [[ ! -x "$GIT" ]] && GIT=$(command -v git)
 
+TRICKLE="/usr/bin/trickle"
+[[ ! -x "$TRICKLE" ]] && TRICKLE=$(command -v trickle)
+
 FILEPATH="$HOME"
 CHECK_CERT=true
 DOWNLOAD_LIMIT="750K"
@@ -70,6 +73,10 @@ USE_CURL=false
 USE_WGET=false
 USE_GIT=false
 USE_SURGE=false
+ARIA2_SPEED_LIMITS=true
+CURL_SPEED_LIMITS=true
+WGET_SPEED_LIMITS=true
+GIT_SPEED_LIMITS=true
 GITHUB_TOKEN=""
 GITHUB_BRANCH="main"
 GITHUB_REPO=""
@@ -111,7 +118,11 @@ while [[ "$#" -gt 0 ]]; do
     --use-git)             USE_GIT=true ;;
     --git-path=*)          GIT="${1#*=}" ;;
     --github-token=*)      GITHUB_TOKEN="${1#*=}" ;;
-    --branch=*)            GITHUB_BRANCH="${1#*=}" ;;
+    --github-branch=*)            GITHUB_BRANCH="${1#*=}" ;;
+    --aria2-speed-limits=*) ARIA2_SPEED_LIMITS="${1#*=}" ;;
+    --curl-speed-limits=*)  CURL_SPEED_LIMITS="${1#*=}" ;;
+    --wget-speed-limits=*)  WGET_SPEED_LIMITS="${1#*=}" ;;
+    --git-speed-limits=*)   GIT_SPEED_LIMITS="${1#*=}" ;;
     -c)                    CONTINUE="true" ;;
     http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
       if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
@@ -160,6 +171,11 @@ SURGE="$SURGE"
 COMPRESSION="$COMPRESSION"
 GIT="$GIT"
 GITHUB_TOKEN="$GITHUB_TOKEN"
+TRICKLE="$TRICKLE"
+ARIA2_SPEED_LIMITS="$ARIA2_SPEED_LIMITS"
+CURL_SPEED_LIMITS="$CURL_SPEED_LIMITS"
+WGET_SPEED_LIMITS="$WGET_SPEED_LIMITS"
+GIT_SPEED_LIMITS="$GIT_SPEED_LIMITS"
 EOF
 
 SURGE_CONFIG="$HOME/.config/surge/settings.json"
@@ -169,6 +185,15 @@ if [[ -f "$SURGE_CONFIG" ]] && command -v jq &>/dev/null; then
 fi
 
 # --- Helper Functions ---
+to_kbps() {
+  local val="${1^^}"
+  if [[ "$val" == *K ]]; then echo "${val%K}"
+  elif [[ "$val" == *M ]]; then echo $(( ${val%M} * 1024 ))
+  elif [[ "$val" == *G ]]; then echo $(( ${val%G} * 1048576 ))
+  else echo $(( $1 / 1024 ))
+  fi
+}
+
 send_notification() {
   [[ "$NTFY_ENABLED" != "true" ]] && return
   "$CURL" -H "Title: $1" -H "Priority: default" -H "Tags: package,white_check_mark" -d "$2" "https://ntfy.sh/$NTFY_TOPIC"
@@ -226,6 +251,22 @@ while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
 if [[ "$USE_GIT" == "true" ]] && [[ -n "$GITHUB_REPO" ]]; then
   echo "Attempt $ATTEMPT (git)..." | tee -a "$LOGFILE"
   CLONE_DIR="$DIRPATH/$(basename "$GITHUB_REPO")"
+  GIT_CMD=("$GIT")
+  if [[ "$GIT_SPEED_LIMITS" == "true" ]] && [[ -n "$TRICKLE" ]] && [[ -x "$TRICKLE" ]]; then
+    GIT_CMD=("$TRICKLE" -d "$(to_kbps "$DOWNLOAD_LIMIT")" -u "$(to_kbps "$UPLOAD_LIMIT")" "$GIT")
+  fi
+  if [[ -n "$GITHUB_TOKEN" ]]; then
+    AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
+    if "${GIT_CMD[@]}" clone --branch "$GITHUB_BRANCH" "$AUTH_URL" "$CLONE_DIR"; then
+      send_notification "Success" "Cloned $GITHUB_REPO"
+      exit 0
+    fi
+  else
+    if "${GIT_CMD[@]}" clone --branch "$GITHUB_BRANCH" "https://github.com/$GITHUB_REPO" "$CLONE_DIR"; then
+      send_notification "Success" "Cloned $GITHUB_REPO"
+      exit 0
+    fi
+  fi
   if [[ -n "$GITHUB_TOKEN" ]]; then
     AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
     if "$GIT" clone --branch "$GITHUB_BRANCH" "$AUTH_URL" "$CLONE_DIR"; then
@@ -240,13 +281,17 @@ if [[ "$USE_GIT" == "true" ]] && [[ -n "$GITHUB_REPO" ]]; then
   fi
 elif [[ "$USE_CURL" == "true" ]]; then
   echo "Attempt $ATTEMPT (curl)..." | tee -a "$LOGFILE"
-  if "$CURL" -L ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} --output "$DIRPATH/$OUTFILE" "$URL"; then
+  CURL_LIMITS=()
+  [[ "$CURL_SPEED_LIMITS" == "true" ]] && CURL_LIMITS+=(--limit-rate "$(to_kbps "$DOWNLOAD_LIMIT")K")
+  if "$CURL" -L "${CURL_LIMITS[@]}" ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} --output "$DIRPATH/$OUTFILE" "$URL"; then
     send_notification "Success" "Downloaded $URL"
     exit 0
   fi
 elif [[ "$USE_WGET" == "true" ]]; then
   echo "Attempt $ATTEMPT (wget)..." | tee -a "$LOGFILE"
-  if "$WGET" ${GITHUB_TOKEN:+--header="Authorization: token $GITHUB_TOKEN"} -O "$DIRPATH/$OUTFILE" "$URL"; then
+  WGET_LIMITS=()
+  [[ "$WGET_SPEED_LIMITS" == "true" ]] && WGET_LIMITS+=(--limit-rate="$(to_kbps "$DOWNLOAD_LIMIT")K")
+  if "$WGET" "${WGET_LIMITS[@]}" ${GITHUB_TOKEN:+--header="Authorization: token $GITHUB_TOKEN"} -O "$DIRPATH/$OUTFILE" "$URL"; then
     send_notification "Success" "Downloaded $URL"
     exit 0
   fi
@@ -264,8 +309,8 @@ else
   CMD=("$ARIA2C" -x "$STREAMS" -s "$STREAMS" --max-tries="$MAX_TRIES_INSIDE_ARIA2C" \
         --retry-wait="$RETRY_WAIT" --timeout="$TIMEOUT" --check-certificate="$CHECK_CERT" \
         --save-session="$SESSION_FILE" --save-session-interval="$SAVING_INTERVAL" \
-        --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION" \
-        --max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
+        --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION")
+  [[ "$ARIA2_SPEED_LIMITS" == "true" ]] && CMD+=(--max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
 
   if [[ "$DOWNLOAD_ALL" == "true" ]]; then
     INPUT_FILE="$DIRPATH/crawl.txt"
