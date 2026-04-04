@@ -9,9 +9,10 @@ A Bash wrapper for downloading files using multiple tools with persistent config
 By default the script picks the best tool automatically:
 
 - **Surge** — used for `http`/`https` URLs (fastest for direct downloads)
+- **Wget** — used for crawling URL folders to find all the filenames and structure without actually downloading.
 - **aria2c** — used for everything else (`ftp`, `magnet`, `sftp`, `s3`, `gs`, `rsync`, folder crawling, GitHub API downloads, etc.)
 
-You can override this with `--use-aria2`, `--use-curl`, `--use-wget`, `--use-surge`, or `--use-git`.
+You can override this with `--use-aria2`, `--use-curl`, `--use-wget`, `--use-surge`, or `--use-git` where it uses that one for downloading.
 
 ---
 
