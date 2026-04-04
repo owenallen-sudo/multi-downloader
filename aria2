@@ -123,6 +123,11 @@ done
 
 # Save back to config
 cat > "$CONFIG_FILE" <<EOF
+SURGE_CONFIG="$HOME/.config/surge/settings.json"
+if [[ -f "$SURGE_CONFIG" ]] && command -v jq &>/dev/null; then
+  tmp=$(mktemp)
+  jq --argjson c "$STREAMS" '.network.max_connections_per_host = $c' "$SURGE_CONFIG" > "$tmp" && mv "$tmp" "$SURGE_CONFIG"
+fi
 NTFY_TOPIC="$NTFY_TOPIC"
 STREAMS="$STREAMS"
 DOWNLOAD_LIMIT="$DOWNLOAD_LIMIT"
