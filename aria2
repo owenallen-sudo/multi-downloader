@@ -40,6 +40,9 @@ WGET="/usr/bin/wget"
 ARIA2C="/usr/bin/aria2c"
 [[ ! -x "$ARIA2C" ]] && ARIA2C=$(command -v aria2c)
 
+SURGE="/usr/bin/surge"
+[[ ! -x "$SURGE" ]] && SURGE=$(command -v surge)
+
 FILEPATH="$HOME"
 CHECK_CERT=true
 DOWNLOAD_LIMIT="750K"
@@ -59,6 +62,7 @@ CONFIG_FILE="$HOME/.config/aria2dl/config"
 NTFY_ENABLED=true
 DOWNLOAD_ALL=false
 COMPRESSION=true
+USE_ARIA2=false
 URL=""
 EXTRA_ARGS=()
 
@@ -89,6 +93,7 @@ while [[ "$#" -gt 0 ]]; do
     --continue=*)          CONTINUE="${1#*=}" ;;
     --download-all-files=*) DOWNLOAD_ALL="${1#*=}" ;;
     --http-accept-gzip=*)  COMPRESSION="${1#*=}" ;;
+    --use-aria2) USE_ARIA2=true ;;
     -c)                    CONTINUE="true" ;;
     http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
       if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
@@ -188,28 +193,36 @@ LOGFILE="$DIRPATH/aria2.log"
 ATTEMPT=0
 while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
   ((ATTEMPT++))
-  
-  CMD=("$ARIA2C" -x "$STREAMS" -s "$STREAMS" --max-tries="$MAX_TRIES_INSIDE_ARIA2C" \
-       --retry-wait="$RETRY_WAIT" --timeout="$TIMEOUT" --check-certificate="$CHECK_CERT" \
-       --save-session="$SESSION_FILE" --save-session-interval="$SAVING_INTERVAL" \
-       --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION" \
-       --max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
 
-  if [[ "$DOWNLOAD_ALL" == "true" ]]; then
-    INPUT_FILE="$DIRPATH/crawl.txt"
-    build_aria2_input "$URL" "$DIRPATH" "$INPUT_FILE"
-    CMD+=(--input-file="$INPUT_FILE")
+  if [[ "$USE_ARIA2" != "true" ]] && [[ "$DOWNLOAD_ALL" != "true" ]] && \
+     [[ "$URL" == http://* || "$URL" == https://* ]] && \
+     command -v "$SURGE" &>/dev/null; then
+    echo "Attempt $ATTEMPT (surge)..." | tee -a "$LOGFILE"
+    if "$SURGE" "$URL" -o "$DIRPATH/$OUTFILE" --exit-when-done; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
   else
-    CMD+=(--dir="$DIRPATH" -o "$OUTFILE" "$URL")
-  fi
-  
-  # Add the custom flags
-  CMD+=("${EXTRA_ARGS[@]}")
+    CMD=("$ARIA2C" -x "$STREAMS" -s "$STREAMS" --max-tries="$MAX_TRIES_INSIDE_ARIA2C" \
+         --retry-wait="$RETRY_WAIT" --timeout="$TIMEOUT" --check-certificate="$CHECK_CERT" \
+         --save-session="$SESSION_FILE" --save-session-interval="$SAVING_INTERVAL" \
+         --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION" \
+         --max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
 
-  echo "Attempt $ATTEMPT..." | tee -a "$LOGFILE"
-  if "${CMD[@]}"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
+    if [[ "$DOWNLOAD_ALL" == "true" ]]; then
+      INPUT_FILE="$DIRPATH/crawl.txt"
+      build_aria2_input "$URL" "$DIRPATH" "$INPUT_FILE"
+      CMD+=(--input-file="$INPUT_FILE")
+    else
+      CMD+=(--dir="$DIRPATH" -o "$OUTFILE" "$URL")
+    fi
+
+    CMD+=("${EXTRA_ARGS[@]}")
+    echo "Attempt $ATTEMPT (aria2c)..." | tee -a "$LOGFILE"
+    if "${CMD[@]}"; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
   fi
   sleep 2
 done
