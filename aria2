@@ -62,6 +62,12 @@ COMPRESSION=true
 URL=""
 EXTRA_ARGS=()
 
+if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
+    URL="${1%/}archive/refs/heads/main.zip"
+else
+    URL="$1"
+fi
+
 # Load config if exists (this allows overrides)
 [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
