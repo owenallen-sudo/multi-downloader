@@ -43,6 +43,9 @@ ARIA2C="/usr/bin/aria2c"
 SURGE="/usr/bin/surge"
 [[ ! -x "$SURGE" ]] && SURGE=$(command -v surge)
 
+GIT="/usr/bin/git"
+[[ ! -x "$GIT" ]] && GIT=$(command -v git)
+
 FILEPATH="$HOME"
 CHECK_CERT=true
 DOWNLOAD_LIMIT="750K"
@@ -65,6 +68,7 @@ COMPRESSION=true
 USE_ARIA2=false
 USE_CURL=false
 USE_WGET=false
+USE_GIT=false
 URL=""
 EXTRA_ARGS=()
 
@@ -99,6 +103,8 @@ while [[ "$#" -gt 0 ]]; do
     --use-aria2) USE_ARIA2=true ;;
     --use-curl) USE_CURL=true ;;
     --use-wget) USE_WGET=true ;;
+    --use-git)             USE_GIT=true ;;
+    --git-path=*)          GIT="${1#*=}" ;;
     -c)                    CONTINUE="true" ;;
     http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
       if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
@@ -206,7 +212,21 @@ ATTEMPT=0
 while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
   ((ATTEMPT++))
 
-  if [[ "$USE_CURL" == "true" ]]; then
+if [[ "$USE_GIT" == "true" ]] && [[ "$URL" == *"github.com"* ]]; then
+    echo "Attempt $ATTEMPT (git)..." | tee -a "$LOGFILE"
+    if [[ -n "$GITHUB_TOKEN" ]]; then
+      AUTH_URL=$(echo "$URL" | sed "s|https://|https://$GITHUB_TOKEN@|")
+      if "$GIT" clone "$AUTH_URL" "$DIRPATH/$OUTFILE"; then
+        send_notification "Success" "Cloned $URL"
+        exit 0
+      fi
+    else
+      if "$GIT" clone "$URL" "$DIRPATH/$OUTFILE"; then
+        send_notification "Success" "Cloned $URL"
+        exit 0
+      fi
+    fi
+  elif [[ "$USE_CURL" == "true" ]]; then
     echo "Attempt $ATTEMPT (curl)..." | tee -a "$LOGFILE"
     if "$CURL" -L --output "$DIRPATH/$OUTFILE" "$URL"; then
       send_notification "Success" "Downloaded $URL"
