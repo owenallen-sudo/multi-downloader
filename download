@@ -4,10 +4,10 @@
 # It is a breach of the license terms to distribute this file without the Mozilla Public License v. 2.0, it states that any distributed version of this file must be open-source etc.
 # For more details see the LICENSE file or http://mozilla.org/MPL/2.0/.
 
-mkdir -p "$HOME/.config/aria2dl"
+mkdir -p "$HOME/.config/download"
 
 # Logic for flag file
-FLAGS_FILE="$HOME/.config/aria2dl/flags"
+FLAGS_FILE="$HOME/.config/download/flags"
 [[ ! -f "$FLAGS_FILE" ]] && touch "$FLAGS_FILE"
 
 # Logic for addflag / removeflag
@@ -63,17 +63,17 @@ CHECK_CERT=true
 DOWNLOAD_LIMIT="750K"
 UPLOAD_LIMIT="1M"
 STREAMS=12
-MAX_SCRIPT_TRIES=3
+MAX_SCRIPT_TRIES=2
 CONTINUE=false
 URI_SELECTOR=feedback
-FILE_ALLOCATION=falloc
+FILE_ALLOCATION=none
 SAVING_INTERVAL=5
 ALLOW_OVERWRITE=true
-TIMEOUT=600
-RETRY_WAIT=8
-MAX_TRIES_INSIDE_ARIA2C=600
+TIMEOUT=60
+RETRY_WAIT=3
+MAX_TRIES_INSIDE_ARIA2C=5
 NTFY_TOPIC=download_on_pc
-CONFIG_FILE="$HOME/.config/aria2dl/config"
+CONFIG_FILE="$HOME/.config/download/config"
 NTFY_ENABLED=true
 DOWNLOAD_ALL=false
 COMPRESSION=true
@@ -85,23 +85,23 @@ USE_SURGE=false
 USE_LFTP=false
 USE_ZSYNC=false
 USE_TRANSMISSION=false
-LFTP_SPEED_LIMITS=true
-TRANSMISSION_SPEED_LIMITS=true
-ZSYNC_SPEED_LIMITS=true
+LFTP_SPEED_LIMITS=false
+TRANSMISSION_SPEED_LIMITS=false
+ZSYNC_SPEED_LIMITS=false
 ZSYNC_UPDATE=false
 ZSYNC_OLD_VERSION=""
-BUFFER_SIZE="4M"
+BUFFER_SIZE="16M"
 TRANSMISSION_HOST="localhost:9091"
 TRANSMISSION_AUTH=""
-ARIA2_SPEED_LIMITS=true
-CURL_SPEED_LIMITS=true
-WGET_SPEED_LIMITS=true
-GIT_SPEED_LIMITS=true
+ARIA2_SPEED_LIMITS=false
+CURL_SPEED_LIMITS=false
+WGET_SPEED_LIMITS=false
+GIT_SPEED_LIMITS=false
 GIT_DEPTH=""
 GITHUB_TOKEN=""
 GITHUB_BRANCH="main"
 GITHUB_REPO=""
-GITHUB_DEFAULT="git"
+GITHUB_DEFAULT="aria2"
 URL=""
 EXTRA_ARGS=()
 
@@ -147,7 +147,7 @@ while [[ "$#" -gt 0 ]]; do
     --curl-speed-limits=*)         CURL_SPEED_LIMITS="${1#*=}" ;;
     --wget-speed-limits=*)         WGET_SPEED_LIMITS="${1#*=}" ;;
     --git-speed-limits=*)          GIT_SPEED_LIMITS="${1#*=}" ;;
-    --zsync-speed-limits=*)         ZSYNC_SPEED_LIMITS="${1#*=}" ;; 
+    --zsync-speed-limits=*)        ZSYNC_SPEED_LIMITS="${1#*=}" ;; 
     --use-lftp)                    USE_LFTP=true ;;
     --use-zsync)                   USE_ZSYNC=true ;;
     --use-transmission-remote)     USE_TRANSMISSION=true ;;
