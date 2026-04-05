@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 # This Source code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 # If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # It is a breach of the license terms to distribute this file without the Mozilla Public License v. 2.0, it states that any distributed version of this file must be open-source etc.
@@ -87,6 +87,7 @@ USE_ZSYNC=false
 USE_TRANSMISSION=false
 LFTP_SPEED_LIMITS=true
 TRANSMISSION_SPEED_LIMITS=true
+ZSYNC_SPEED_LIMITS=true
 ZSYNC_UPDATE=false
 ZSYNC_OLD_VERSION=""
 BUFFER_SIZE="4M"
@@ -146,6 +147,7 @@ while [[ "$#" -gt 0 ]]; do
     --curl-speed-limits=*)         CURL_SPEED_LIMITS="${1#*=}" ;;
     --wget-speed-limits=*)         WGET_SPEED_LIMITS="${1#*=}" ;;
     --git-speed-limits=*)          GIT_SPEED_LIMITS="${1#*=}" ;;
+    --zsync-speed-limits=*)         ZSYNC_SPEED_LIMITS="${1#*=}" ;; 
     --use-lftp)                    USE_LFTP=true ;;
     --use-zsync)                   USE_ZSYNC=true ;;
     --use-transmission-remote)     USE_TRANSMISSION=true ;;
@@ -279,6 +281,7 @@ ARIA2_SPEED_LIMITS="$ARIA2_SPEED_LIMITS"
 CURL_SPEED_LIMITS="$CURL_SPEED_LIMITS"
 WGET_SPEED_LIMITS="$WGET_SPEED_LIMITS"
 GIT_SPEED_LIMITS="$GIT_SPEED_LIMITS"
+ZSYNC_SPEED_LIMITS="$ZSYNC_SPEED_LIMITS"
 EOF
 
 SURGE_CONFIG="$HOME/.config/surge/settings.json"
@@ -357,7 +360,11 @@ elif [[ "$USE_ZSYNC" == "true" ]]; then
   ZSYNC_ARGS=()
   [[ "$ZSYNC_UPDATE" == "true" ]] && [[ -n "$ZSYNC_OLD_VERSION" ]] && ZSYNC_ARGS+=(-i "$ZSYNC_OLD_VERSION")
   ZSYNC_ARGS+=(-o "$DIRPATH/$OUTFILE")
-  if "$ZSYNC" "${ZSYNC_ARGS[@]}" "$URL"; then
+  ZSYNC_CMD=("$ZSYNC")
+  if [[ "$ZSYNC_SPEED_LIMITS" == "true" ]] && [[ -n "$TRICKLE" ]] && [[ -x "$TRICKLE" ]]; then
+    ZSYNC_CMD=("$TRICKLE" -d "$(to_kbps "$DOWNLOAD_LIMIT")" -u "$(to_kbps "$UPLOAD_LIMIT")" "$ZSYNC")
+  fi
+  if "${ZSYNC_CMD[@]}" "${ZSYNC_ARGS[@]}" "$URL"; then
     send_notification "Success" "Downloaded $URL"
     exit 0
   fi
