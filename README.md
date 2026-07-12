@@ -8,7 +8,7 @@ A Bash wrapper for downloading files using multiple tools with persistent config
 
 This project wasn't started for fun — it was built out of necessity.
 
-My wifi connection comes from a 4G router with poor signal and no ability to add an external antenna. On a very good day it reaches approximately 40 Mbps download and 8 Mbps upload, but on a bad day it drops to 4–8 Mbps download and around 4 Mbps upload — and no matter how much optimisation I did, it remained unstable. Setting a custom MTU value of 1360, switching to native `iwd` for my Intel wifi card, forcing IPv4, and writing my own [iwdwifi](https://github.com/owenallen-sudo/iwdwifi) project as an `nmtui` alternative with no background scanning all helped to varying degrees, but instability was always there.
+My wifi connection comes from a 4G router with very bad signal and no ability to add an external antenna. On a very good day it reaches approximately 40 Mbps download and 8 Mbps upload, but on a bad day it drops to 4–8 Mbps download and around 4 Mbps upload — and no matter how much optimisation I did, it remained unstable. Setting a custom MTU value of 1360, switching to native `iwd` for my Intel wifi card, forcing IPv4, and writing my own [iwdwifi](https://github.com/owenallen-sudo/iwdwifi) project as an `nmtui` alternative with no background scanning all helped to varying degrees, but instability was always there.
 
 Before this script, I was running aria2c manually with 16+ flags that I had to keep written down in my phone's notes app — download limits, upload limits, retry counts, connection counts, and much more. Even with all of that, anything above 250MB would frequently fail overnight or take so many hours that I had no idea if it had finished or crashed. The ntfy push notification support exists precisely because of this — rather than checking back repeatedly or finding a failed download the next morning, the script notifies you the moment it succeeds or gives up.
 
@@ -16,7 +16,7 @@ This script was built to make downloads actually bearable on a slow, unstable co
 
 ---
 
-## How It Works
+## What it does
 
 The script automatically selects the best tool based on the URL and flags:
 
