@@ -20,9 +20,7 @@ All `--use-*` flags override automatic detection for edge cases or personal pref
 ---
 
 ## Dependencies
-
-Only aria2c is strictly required, but installing all tools gives full functionality:
-
+You can skip any one of these tools and get full functionality for everything else.
 | Tool | Required? | Used For |
 |------|-----------|----------|
 | `surge` | Recommended | Fast HTTP/HTTPS downloads (default for http/https) |
