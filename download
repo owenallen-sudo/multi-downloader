@@ -109,11 +109,8 @@ GITHUB_DEFAULT="aria2"
 URL=""
 
 EXTRA_ARGS=""
-
-# Load config if exists (this allows overrides)
 [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
-# Parse flags
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --check-certificate=*)         CHECK_CERT="${1#*=}" ;;
@@ -284,7 +281,6 @@ detect_folder_url() {
   esac
 }
 
-# Save back to config
 cat > "$CONFIG_FILE" <<EOF
 NTFY_TOPIC="$NTFY_TOPIC"
 STREAMS="$STREAMS"
@@ -341,7 +337,6 @@ set net:reconnect-interval-base 5
 set net:max-retries 3
 EOF
 
-# --- Execution ---
 [ -n "$GITHUB_REPO" ] && URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"
 if [ -z "$URL" ]; then
   echo "Error: No URL."
@@ -380,9 +375,6 @@ while [ "$ATTEMPT" -lt "$MAX_SCRIPT_TRIES" ]; do
     echo "Attempt $ATTEMPT (git)..." | tee -a "$LOGFILE"
     CLONE_DIR="$DIRPATH/$(basename "$GITHUB_REPO")"
 
-    # GIT_CMD was a bash array ("$TRICKLE" -d ... -u ... "$GIT"); POSIX sh
-    # has no arrays, so build a single command string and eval it. Values
-    # here are internal paths/numbers, not raw user text, so this is safe.
     if [ "$GIT_SPEED_LIMITS" = "true" ] && [ -n "$TRICKLE" ] && [ -x "$TRICKLE" ]; then
       GIT_CMD="\"$TRICKLE\" -d \"$(to_kbps "$DOWNLOAD_LIMIT")\" -u \"$(to_kbps "$UPLOAD_LIMIT")\" \"$GIT\""
     else
