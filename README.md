@@ -20,8 +20,7 @@ All `--use-*` flags override automatic detection for edge cases or personal pref
 ---
 
 ## Dependencies
-
-Only aria2c is strictly required, but installing all tools gives full functionality:
+You can skip any one of these tools and get full functionality for everything else
 
 | Tool | Required? | Used For |
 |------|-----------|----------|
@@ -35,6 +34,7 @@ Only aria2c is strictly required, but installing all tools gives full functional
 | `git` | Optional | GitHub repo cloning via `--use-git` or `--github-default=git` |
 | `trickle` | Optional | Speed limiting for git and zsync (no native speed limit) |
 | `jq` | Optional | Syncing connection count to surge's config |
+| `aria2` | Optional | Metalink support
 
 ---
 
