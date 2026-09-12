@@ -105,7 +105,7 @@ GIT_DEPTH=""
 GITHUB_TOKEN=""
 GITHUB_BRANCH="main"
 GITHUB_REPO=""
-GITHUB_DEFAULT="aria2"
+GITHUB_DEFAULT="surge"
 URL=""
 
 EXTRA_ARGS=""
@@ -177,6 +177,7 @@ while [ "$#" -gt 0 ]; do
                 *)
                   case "$GITHUB_DEFAULT" in
                     git)                  USE_GIT=true ;;
+                    surge)                USE_SURGE=true ;;
                     aria2c|aria2)         USE_ARIA2=true ;;
                     curl)                 USE_CURL=true ;;
                     wget)                 USE_WGET=true ;;
