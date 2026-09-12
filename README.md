@@ -20,7 +20,7 @@ All `--use-*` flags override automatic detection for edge cases or personal pref
 ---
 
 ## Dependencies
-You can skip any one of these tools and get full support for everything else.
+You can skip any one of these tools and get full functionality for everything else.
 
 | Tool | Required? | Used For |
 |------|-----------|----------|
