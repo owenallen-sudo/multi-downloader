@@ -33,7 +33,7 @@ You can skip any one of these tools and get full functionality for everything el
 | `git` | Optional | GitHub repo cloning via `--use-git` or `--github-default=git` |
 | `trickle` | Optional | Speed limiting for git and zsync (no native speed limit) |
 | `jq` | Optional | Syncing connection count to surge's config |
-| `aria2` | Optional | Metalink support
+| `aria2` | Optional | Native metalink support
 
 ---
 
