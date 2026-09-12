@@ -24,7 +24,6 @@ You can skip any one of these tools and get full functionality for everything el
 
 | Tool | Required? | Used For |
 |------|-----------|----------|
-| `aria2c` | Recommended | Default for most protocols, folder crawling, fallback |
 | `surge` | Recommended | Fast HTTP/HTTPS downloads (default for http/https) |
 | `curl` | Recommended | Notifications, folder URL detection, `--use-curl` mode |
 | `wget` | Recommended | Folder crawling (spider mode), `--use-wget` mode |
