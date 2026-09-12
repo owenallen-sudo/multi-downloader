@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # This Source code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 # If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # It is a breach of the license terms to distribute this file without the Mozilla Public License v. 2.0, it states that any distributed version of this file must be open-source etc.
@@ -8,55 +8,59 @@ mkdir -p "$HOME/.config/download"
 
 # Logic for flag file
 FLAGS_FILE="$HOME/.config/download/flags"
-[[ ! -f "$FLAGS_FILE" ]] && touch "$FLAGS_FILE"
+[ ! -f "$FLAGS_FILE" ] && touch "$FLAGS_FILE"
 
 # Logic for addflag / removeflag
-if [[ "$1" == "addflag" ]]; then
+if [ "$1" = "addflag" ]; then
   SCRIPT_FLAG="$2"
   ARIA2C_FLAG="$4"  # $3 is "for"
-  if [[ -z "$SCRIPT_FLAG" || -z "$ARIA2C_FLAG" ]]; then
+  if [ -z "$SCRIPT_FLAG" ] || [ -z "$ARIA2C_FLAG" ]; then
     echo "Usage: aria2 addflag <scriptflag> for <aria2cflag>"
     exit 1
   fi
-  grep -q "^$SCRIPT_FLAG:" "$FLAGS_FILE" && { echo "Flag exists, remove it first."; exit 1; }
+  if grep -q "^$SCRIPT_FLAG:" "$FLAGS_FILE"; then
+    echo "Flag exists, remove it first."
+    exit 1
+  fi
   echo "$SCRIPT_FLAG:$ARIA2C_FLAG" >> "$FLAGS_FILE"
-  echo "Added: $SCRIPT_FLAG -> $ARIA2C_FLAG"; exit 0
+  echo "Added: $SCRIPT_FLAG -> $ARIA2C_FLAG"
+  exit 0
 fi
 
-if [[ "$1" == "removeflag" ]]; then
+if [ "$1" = "removeflag" ]; then
   SCRIPT_FLAG="$2"
   grep -v "^$SCRIPT_FLAG:" "$FLAGS_FILE" > "${FLAGS_FILE}.tmp" && mv "${FLAGS_FILE}.tmp" "$FLAGS_FILE"
-  echo "Removed: $SCRIPT_FLAG"; exit 0
+  echo "Removed: $SCRIPT_FLAG"
+  exit 0
 fi
 
 # --- Defaults & Hardcoded Paths ---
-# We check if they exist at the hardcoded path; if not, we use 'command -v' as a fallback.
 CURL="/usr/bin/curl"
-[[ ! -x "$CURL" ]] && CURL=$(command -v curl)
+[ ! -x "$CURL" ] && CURL=$(command -v curl)
 
-WGET="/usr/bin/wget" 
-[[ ! -x "$WGET" ]] && WGET=$(command -v wget)
+WGET="/usr/bin/wget"
+[ ! -x "$WGET" ] && WGET=$(command -v wget)
 
 ARIA2C="/usr/bin/aria2c"
-[[ ! -x "$ARIA2C" ]] && ARIA2C=$(command -v aria2c)
+[ ! -x "$ARIA2C" ] && ARIA2C=$(command -v aria2c)
 
 SURGE="/usr/bin/surge"
-[[ ! -x "$SURGE" ]] && SURGE=$(command -v surge)
+[ ! -x "$SURGE" ] && SURGE=$(command -v surge)
 
 GIT="/usr/bin/git"
-[[ ! -x "$GIT" ]] && GIT=$(command -v git)
+[ ! -x "$GIT" ] && GIT=$(command -v git)
 
 LFTP="/usr/bin/lftp"
-[[ ! -x "$LFTP" ]] && LFTP=$(command -v lftp)
+[ ! -x "$LFTP" ] && LFTP=$(command -v lftp)
 
 ZSYNC="/usr/bin/zsync"
-[[ ! -x "$ZSYNC" ]] && ZSYNC=$(command -v zsync)
+[ ! -x "$ZSYNC" ] && ZSYNC=$(command -v zsync)
 
 TRANSMISSION="/usr/bin/transmission-remote"
-[[ ! -x "$TRANSMISSION" ]] && TRANSMISSION=$(command -v transmission-remote)
+[ ! -x "$TRANSMISSION" ] && TRANSMISSION=$(command -v transmission-remote)
 
 TRICKLE="/usr/bin/trickle"
-[[ ! -x "$TRICKLE" ]] && TRICKLE=$(command -v trickle)
+[ ! -x "$TRICKLE" ] && TRICKLE=$(command -v trickle)
 
 FILEPATH="$HOME"
 CHECK_CERT=true
@@ -101,15 +105,13 @@ GIT_DEPTH=""
 GITHUB_TOKEN=""
 GITHUB_BRANCH="main"
 GITHUB_REPO=""
-GITHUB_DEFAULT="aria2"
+GITHUB_DEFAULT="surge"
 URL=""
-EXTRA_ARGS=()
 
-# Load config if exists (this allows overrides)
-[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+EXTRA_ARGS=""
+[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
 
-# Parse flags
-while [[ "$#" -gt 0 ]]; do
+while [ "$#" -gt 0 ]; do
   case "$1" in
     --check-certificate=*)         CHECK_CERT="${1#*=}" ;;
     --download-limit=*)            DOWNLOAD_LIMIT="${1#*=}" ;;
@@ -128,7 +130,7 @@ while [[ "$#" -gt 0 ]]; do
     --ntfy-enabled=*)              NTFY_ENABLED="${1#*=}" ;;
     --curl-path=*)                 CURL="${1#*=}" ;;
     --wget-path=*)                 WGET="${1#*=}" ;;
-    --aria2-path=*)                ARIA2C="${1#*=}" ;; 
+    --aria2-path=*)                ARIA2C="${1#*=}" ;;
     --surge-path=*)                SURGE="${1#*=}" ;;
     --continue=*)                  CONTINUE="${1#*=}" ;;
     --download-all-files=*)        DOWNLOAD_ALL="${1#*=}" ;;
@@ -147,7 +149,7 @@ while [[ "$#" -gt 0 ]]; do
     --curl-speed-limits=*)         CURL_SPEED_LIMITS="${1#*=}" ;;
     --wget-speed-limits=*)         WGET_SPEED_LIMITS="${1#*=}" ;;
     --git-speed-limits=*)          GIT_SPEED_LIMITS="${1#*=}" ;;
-    --zsync-speed-limits=*)        ZSYNC_SPEED_LIMITS="${1#*=}" ;; 
+    --zsync-speed-limits=*)        ZSYNC_SPEED_LIMITS="${1#*=}" ;;
     --use-lftp)                    USE_LFTP=true ;;
     --use-zsync)                   USE_ZSYNC=true ;;
     --use-transmission-remote)     USE_TRANSMISSION=true ;;
@@ -163,87 +165,123 @@ while [[ "$#" -gt 0 ]]; do
     --transmission-auth=*)         TRANSMISSION_AUTH="${1#*=}" ;;
     -c)                            CONTINUE="true" ;;
     http*|ftp*|magnet*|sftp*|s3*|gs*|rsync*)
-      if [[ "$1" == *"github.com"* ]] && [[ "$1" != *"/archive/"* ]]; then
-        GITHUB_REPO=$(echo "$1" | grep -oP 'github\.com/\K[^/]+/[^/]+')
-        URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"
-        if [[ "$1" != http://* && "$1" != https://* ]]; then
-          case "$GITHUB_DEFAULT" in
-            git)                USE_GIT=true ;;
-            aria2c|aria2)       USE_ARIA2=true ;;
-            curl)               USE_CURL=true ;;
-            wget)               USE_WGET=true ;;
-            lftp)               USE_LFTP=true ;;
-            transmission-remote) USE_TRANSMISSION=true ;;
+      case "$1" in
+        *github.com*)
+          case "$1" in
+            *"/archive/"*) URL="$1" ;;
+            *)
+              GITHUB_REPO=$(echo "$1" | grep -oE 'github\.com/[^/]+/[^/]+' | sed 's#github\.com/##')
+              URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"
+              case "$1" in
+                http://*|https://*) ;;
+                *)
+                  case "$GITHUB_DEFAULT" in
+                    git)                  USE_GIT=true ;;
+                    surge)                USE_SURGE=true ;;
+                    aria2c|aria2)         USE_ARIA2=true ;;
+                    curl)                 USE_CURL=true ;;
+                    wget)                 USE_WGET=true ;;
+                    lftp)                 USE_LFTP=true ;;
+                    transmission-remote)  USE_TRANSMISSION=true ;;
+                  esac
+                  ;;
+              esac
+              ;;
           esac
-       fi
-      else
-        URL="$1"
-      fi
+          ;;
+        *)
+          URL="$1"
+          ;;
+      esac
       ;;
     *)
-      if [[ "$1" == *"://"* ]]; then
-        URL="$1"
-        shift; continue
-      fi
+      case "$1" in
+        *"://"*)
+          URL="$1"
+          shift
+          continue
+          ;;
+      esac
       MATCHED=false
+      
       while IFS=: read -r SFLAG AFLAG; do
-        if [[ "$1" == "$SFLAG" ]]; then
-          EXTRA_ARGS+=("$AFLAG")
-          MATCHED=true; break
+        if [ "$1" = "$SFLAG" ]; then
+          EXTRA_ARGS="${EXTRA_ARGS}${AFLAG}
+"
+          MATCHED=true
+          break
         fi
       done < "$FLAGS_FILE"
-      [[ "$MATCHED" == false ]] && echo "Unknown flag: $1"
+      [ "$MATCHED" = false ] && echo "Unknown flag: $1"
       ;;
   esac
   shift
-done 
+done
 
-      # Auto-detect tool based on URL and flags
-[[ -n "$ZSYNC_OLD_VERSION" ]] && ZSYNC_UPDATE=true && USE_ZSYNC=true
-[[ "$URL" == magnet:* || "$URL" == *.torrent ]] && USE_TRANSMISSION=true
-[[ "$URL" == ftp://* || "$URL" == sftp://* ]] && USE_LFTP=true
+# Auto-detect tool based on URL and flags
+[ -n "$ZSYNC_OLD_VERSION" ] && ZSYNC_UPDATE=true && USE_ZSYNC=true
+case "$URL" in
+  magnet:*|*.torrent) USE_TRANSMISSION=true ;;
+esac
+case "$URL" in
+  ftp://*|sftp://*) USE_LFTP=true ;;
+esac
 
-# --- Helper Functions ---
 to_kbps() {
-  local val="${1^^}"
-  if [[ "$val" == *K ]]; then echo "${val%K}"
-  elif [[ "$val" == *M ]]; then echo $(( ${val%M} * 1024 ))
-  elif [[ "$val" == *G ]]; then echo $(( ${val%G} * 1048576 ))
-  else echo $(( $1 / 1024 ))
-  fi
+  val=$(echo "$1" | tr '[:lower:]' '[:upper:]')
+  case "$val" in
+    *K) echo "${val%K}" ;;
+    *M) echo $(( ${val%M} * 1024 )) ;;
+    *G) echo $(( ${val%G} * 1048576 )) ;;
+    *)  echo $(( $1 / 1024 )) ;;
+  esac
 }
 
 send_notification() {
-  [[ "$NTFY_ENABLED" != "true" ]] && return
+  [ "$NTFY_ENABLED" != "true" ] && return
   "$CURL" -H "Title: $1" -H "Priority: default" -H "Tags: package,white_check_mark" -d "$2" "https://ntfy.sh/$NTFY_TOPIC"
 }
 
 crawl_urls() {
-  "$WGET" --spider -r -nd -nv --no-parent "$1" 2>&1 | grep -oP 'https?://\S+' | grep -v '/$' | sort -u
+  "$WGET" --spider -r -nd -nv --no-parent "$1" 2>&1 | grep -oE 'https?://[^ ]+' | grep -v '/$' | sort -u
 }
 
 build_aria2_input() {
-  local base_url="${1%/}" dest_dir="$2" input_file="$3"
-  > "$input_file"
-  local count=0 
-  while IFS= read -r link; do
-    local relative="${link#$base_url}"; relative="${relative#/}"
-    local fdir=$(dirname "$relative"); local fname=$(basename "$relative")
-    printf '%s\n  dir=%s/%s\n  out=%s\n\n' "$link" "$dest_dir" "$fdir" "$fname" >> "$input_file"
-    ((count++))
-  done < <(crawl_urls "$base_url")
+  base_url="${1%/}"
+  dest_dir="$2"
+  input_file="$3"
+  : > "$input_file"
+  count_file=$(mktemp)
+  echo 0 > "$count_file"
+  crawl_urls "$base_url" | {
+    count=0
+    while IFS= read -r link; do
+      relative="${link#$base_url}"
+      relative="${relative#/}"
+      fdir=$(dirname "$relative")
+      fname=$(basename "$relative")
+      printf '%s\n  dir=%s/%s\n  out=%s\n\n' "$link" "$dest_dir" "$fdir" "$fname" >> "$input_file"
+      count=$((count + 1))
+    done
+    echo "$count" > "$count_file"
+  }
+  count=$(cat "$count_file")
+  rm -f "$count_file"
   echo "Found $count files."
-  [[ $count -gt 0 ]]
+  [ "$count" -gt 0 ]
 }
 
 detect_folder_url() {
-  [[ "$1" == */ ]] && echo "true" && return
-  local effective
+  case "$1" in
+    */) echo "true"; return ;;
+  esac
   effective=$("$CURL" -sI -L -o /dev/null -w '%{url_effective}' "$1")
-  [[ "$effective" == */ ]] && echo "true" || echo "false"
+  case "$effective" in
+    */) echo "true" ;;
+    *)  echo "false" ;;
+  esac
 }
 
-# Save back to config
 cat > "$CONFIG_FILE" <<EOF
 NTFY_TOPIC="$NTFY_TOPIC"
 STREAMS="$STREAMS"
@@ -285,7 +323,7 @@ ZSYNC_SPEED_LIMITS="$ZSYNC_SPEED_LIMITS"
 EOF
 
 SURGE_CONFIG="$HOME/.config/surge/settings.json"
-if [[ -f "$SURGE_CONFIG" ]] && command -v jq &>/dev/null; then
+if [ -f "$SURGE_CONFIG" ] && command -v jq >/dev/null 2>&1; then
   tmp=$(mktemp)
   jq --argjson c "$STREAMS" '.network.max_connections_per_host = $c' "$SURGE_CONFIG" > "$tmp" && mv "$tmp" "$SURGE_CONFIG"
 fi
@@ -300,150 +338,198 @@ set net:reconnect-interval-base 5
 set net:max-retries 5
 EOF
 
-# --- Execution ---
-[[ -n "$GITHUB_REPO" ]] && URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"
-if [[ -z "$URL" ]]; then echo "Error: No URL."; exit 1; fi
+[ -n "$GITHUB_REPO" ] && URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"
+if [ -z "$URL" ]; then
+  echo "Error: No URL."
+  exit 1
+fi
 
 # Path logic
-if [[ "$FILEPATH" == */ ]] || [[ -d "$FILEPATH" ]]; then
-  DIRPATH="${FILEPATH%/}"
-  OUTFILE=$(basename "${URL%%\?*}")
-else
-  DIRPATH=$(dirname "$FILEPATH")
-  OUTFILE=$(basename "$FILEPATH")
-fi
+case "$FILEPATH" in
+  */)
+    DIRPATH="${FILEPATH%/}"
+    OUTFILE=$(basename "${URL%%\?*}")
+    ;;
+  *)
+    if [ -d "$FILEPATH" ]; then
+      DIRPATH="${FILEPATH%/}"
+      OUTFILE=$(basename "${URL%%\?*}")
+    else
+      DIRPATH=$(dirname "$FILEPATH")
+      OUTFILE=$(basename "$FILEPATH")
+    fi
+    ;;
+esac
 
 mkdir -p "$DIRPATH"
 SESSION_FILE="$DIRPATH/aria2.session"
 LOGFILE="$DIRPATH/aria2.log"
-[[ "$CONTINUE" != "true" ]] && > "$SESSION_FILE"
+[ "$CONTINUE" != "true" ] && : > "$SESSION_FILE"
 
-[[ "$DOWNLOAD_ALL" == "false" ]] && DOWNLOAD_ALL=$(detect_folder_url "$URL")
+[ "$DOWNLOAD_ALL" = "false" ] && DOWNLOAD_ALL=$(detect_folder_url "$URL")
 
 ATTEMPT=0
-while [[ $ATTEMPT -lt $MAX_SCRIPT_TRIES ]]; do
-  ((ATTEMPT++))
+while [ "$ATTEMPT" -lt "$MAX_SCRIPT_TRIES" ]; do
+  ATTEMPT=$((ATTEMPT + 1))
 
-if [[ "$USE_GIT" == "true" ]] && [[ -n "$GITHUB_REPO" ]]; then
-  echo "Attempt $ATTEMPT (git)..." | tee -a "$LOGFILE"
-  CLONE_DIR="$DIRPATH/$(basename "$GITHUB_REPO")"
-  GIT_CMD=("$GIT")
-  if [[ "$GIT_SPEED_LIMITS" == "true" ]] && [[ -n "$TRICKLE" ]] && [[ -x "$TRICKLE" ]]; then
-    GIT_CMD=("$TRICKLE" -d "$(to_kbps "$DOWNLOAD_LIMIT")" -u "$(to_kbps "$UPLOAD_LIMIT")" "$GIT")
-  fi
+  if [ "$USE_GIT" = "true" ] && [ -n "$GITHUB_REPO" ]; then
+    echo "Attempt $ATTEMPT (git)..." | tee -a "$LOGFILE"
+    CLONE_DIR="$DIRPATH/$(basename "$GITHUB_REPO")"
 
-  if [[ -d "$CLONE_DIR/.git" ]]; then
-    if "${GIT_CMD[@]}" -C "$CLONE_DIR" fetch origin "$GITHUB_BRANCH" && \
-       "${GIT_CMD[@]}" -C "$CLONE_DIR" checkout "$GITHUB_BRANCH"; then
-      send_notification "Success" "Updated $GITHUB_REPO"
+    if [ "$GIT_SPEED_LIMITS" = "true" ] && [ -n "$TRICKLE" ] && [ -x "$TRICKLE" ]; then
+      GIT_CMD="\"$TRICKLE\" -d \"$(to_kbps "$DOWNLOAD_LIMIT")\" -u \"$(to_kbps "$UPLOAD_LIMIT")\" \"$GIT\""
+    else
+      GIT_CMD="\"$GIT\""
+    fi
+
+    if [ -d "$CLONE_DIR/.git" ]; then
+      if eval "$GIT_CMD" -C "\"$CLONE_DIR\"" fetch origin "\"$GITHUB_BRANCH\"" && \
+         eval "$GIT_CMD" -C "\"$CLONE_DIR\"" checkout "\"$GITHUB_BRANCH\""; then
+        send_notification "Success" "Updated $GITHUB_REPO"
+        exit 0
+      fi
+    else
+      if [ -n "$GITHUB_TOKEN" ]; then
+        AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
+        if [ -n "$GIT_DEPTH" ]; then
+          if eval "$GIT_CMD" clone --depth="\"$GIT_DEPTH\"" --branch "\"$GITHUB_BRANCH\"" "\"$AUTH_URL\"" "\"$CLONE_DIR\""; then
+            send_notification "Success" "Cloned $GITHUB_REPO"
+            exit 0
+          fi
+        else
+          if eval "$GIT_CMD" clone --branch "\"$GITHUB_BRANCH\"" "\"$AUTH_URL\"" "\"$CLONE_DIR\""; then
+            send_notification "Success" "Cloned $GITHUB_REPO"
+            exit 0
+          fi
+        fi
+      else
+        if [ -n "$GIT_DEPTH" ]; then
+          if eval "$GIT_CMD" clone --depth="\"$GIT_DEPTH\"" --branch "\"$GITHUB_BRANCH\"" "\"https://github.com/$GITHUB_REPO\"" "\"$CLONE_DIR\""; then
+            send_notification "Success" "Cloned $GITHUB_REPO"
+            exit 0
+          fi
+        else
+          if eval "$GIT_CMD" clone --branch "\"$GITHUB_BRANCH\"" "\"https://github.com/$GITHUB_REPO\"" "\"$CLONE_DIR\""; then
+            send_notification "Success" "Cloned $GITHUB_REPO"
+            exit 0
+          fi
+        fi
+      fi
+    fi
+
+  elif [ "$USE_ZSYNC" = "true" ]; then
+    echo "Attempt $ATTEMPT (zsync)..." | tee -a "$LOGFILE"
+    ZSYNC_ARGS=""
+    if [ "$ZSYNC_UPDATE" = "true" ] && [ -n "$ZSYNC_OLD_VERSION" ]; then
+      ZSYNC_ARGS="-i \"$ZSYNC_OLD_VERSION\""
+    fi
+    ZSYNC_ARGS="$ZSYNC_ARGS -o \"$DIRPATH/$OUTFILE\""
+
+    if [ "$ZSYNC_SPEED_LIMITS" = "true" ] && [ -n "$TRICKLE" ] && [ -x "$TRICKLE" ]; then
+      ZSYNC_CMD="\"$TRICKLE\" -d \"$(to_kbps "$DOWNLOAD_LIMIT")\" -u \"$(to_kbps "$UPLOAD_LIMIT")\" \"$ZSYNC\""
+    else
+      ZSYNC_CMD="\"$ZSYNC\""
+    fi
+
+    if eval "$ZSYNC_CMD" "$ZSYNC_ARGS" "\"$URL\""; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+
+  elif [ "$USE_LFTP" = "true" ]; then
+    echo "Attempt $ATTEMPT (lftp)..." | tee -a "$LOGFILE"
+    LFTP_RATE=""
+    [ "$LFTP_SPEED_LIMITS" = "true" ] && LFTP_RATE="set net:limit-rate $(to_kbps "$DOWNLOAD_LIMIT")k:$(to_kbps "$UPLOAD_LIMIT")k;"
+    if "$LFTP" -e "${LFTP_RATE}pget -n $STREAMS '$URL' -o '$DIRPATH/$OUTFILE'; quit"; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+
+  elif [ "$USE_TRANSMISSION" = "true" ]; then
+    echo "Attempt $ATTEMPT (transmission-remote)..." | tee -a "$LOGFILE"
+    TRANS_CMD="\"$TRANSMISSION_HOST\""
+    [ -n "$TRANSMISSION_AUTH" ] && TRANS_CMD="$TRANS_CMD --auth \"$TRANSMISSION_AUTH\""
+    if [ "$TRANSMISSION_SPEED_LIMITS" = "true" ]; then
+      TRANS_CMD="$TRANS_CMD --downlimit \"$(to_kbps "$DOWNLOAD_LIMIT")\" --uplimit \"$(to_kbps "$UPLOAD_LIMIT")\""
+    fi
+    TRANS_CMD="$TRANS_CMD --add \"$URL\" --download-dir \"$DIRPATH\""
+    if eval "\"$TRANSMISSION\"" "$TRANS_CMD"; then
+      send_notification "Success" "Queued $URL in transmission"
+      exit 0
+    fi
+
+  elif [ "$USE_CURL" = "true" ]; then
+    echo "Attempt $ATTEMPT (curl)..." | tee -a "$LOGFILE"
+    CURL_LIMITS=""
+    [ "$CURL_SPEED_LIMITS" = "true" ] && CURL_LIMITS="--limit-rate \"$(to_kbps "$DOWNLOAD_LIMIT")K\""
+    GH_HEADER=""
+    [ -n "$GITHUB_TOKEN" ] && GH_HEADER="-H \"Authorization: token $GITHUB_TOKEN\""
+    if eval "\"$CURL\"" -L "$CURL_LIMITS" "$GH_HEADER" --output "\"$DIRPATH/$OUTFILE\"" "\"$URL\""; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+
+  elif [ "$USE_WGET" = "true" ]; then
+    echo "Attempt $ATTEMPT (wget)..." | tee -a "$LOGFILE"
+    WGET_LIMITS=""
+    [ "$WGET_SPEED_LIMITS" = "true" ] && WGET_LIMITS="--limit-rate=\"$(to_kbps "$DOWNLOAD_LIMIT")K\""
+    GH_HEADER=""
+    [ -n "$GITHUB_TOKEN" ] && GH_HEADER="--header=\"Authorization: token $GITHUB_TOKEN\""
+    if eval "\"$WGET\"" "$WGET_LIMITS" "$GH_HEADER" -O "\"$DIRPATH/$OUTFILE\"" "\"$URL\""; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
+    fi
+
+  elif [ "$USE_SURGE" = "true" ] || \
+       { [ "$USE_ARIA2" != "true" ] && [ "$DOWNLOAD_ALL" != "true" ] && \
+         { case "$URL" in http://*|https://*) true ;; *) false ;; esac; } && \
+         { case "$URL" in *"api.github.com"*) false ;; *) true ;; esac; } && \
+         [ -n "$SURGE" ] && [ -x "$SURGE" ]; }; then
+    echo "Attempt $ATTEMPT (surge)..." | tee -a "$LOGFILE"
+    if "$SURGE" "$URL" -o "$DIRPATH/$OUTFILE" --exit-when-done; then
+      send_notification "Success" "Downloaded $URL"
       exit 0
     fi
 
   else
-    if [[ -n "$GITHUB_TOKEN" ]]; then
-      AUTH_URL="https://$GITHUB_TOKEN@github.com/$GITHUB_REPO"
-      if "${GIT_CMD[@]}" clone ${GIT_DEPTH:+--depth="$GIT_DEPTH"} --branch "$GITHUB_BRANCH" "$AUTH_URL" "$CLONE_DIR"; then
-        send_notification "Success" "Cloned $GITHUB_REPO"
-        exit 0
-      fi
+    CMD="\"$ARIA2C\" -x \"$STREAMS\" -s \"$STREAMS\" --max-tries=\"$MAX_TRIES_INSIDE_ARIA2C\""
+    CMD="$CMD --retry-wait=\"$RETRY_WAIT\" --timeout=\"$TIMEOUT\" --check-certificate=\"$CHECK_CERT\""
+    CMD="$CMD --save-session=\"$SESSION_FILE\" --save-session-interval=\"$SAVING_INTERVAL\""
+    CMD="$CMD --allow-overwrite=\"$ALLOW_OVERWRITE\" --file-allocation=\"$FILE_ALLOCATION\""
 
+    if [ "$ARIA2_SPEED_LIMITS" = "true" ]; then
+      CMD="$CMD --max-overall-download-limit=\"$DOWNLOAD_LIMIT\" --max-overall-upload-limit=\"$UPLOAD_LIMIT\""
+    fi
+
+    CMD="$CMD --min-split-size=\"$BUFFER_SIZE\""
+
+    if [ "$DOWNLOAD_ALL" = "true" ]; then
+      INPUT_FILE="$DIRPATH/crawl.txt"
+      build_aria2_input "$URL" "$DIRPATH" "$INPUT_FILE"
+      CMD="$CMD --input-file=\"$INPUT_FILE\""
     else
-      if "${GIT_CMD[@]}" clone ${GIT_DEPTH:+--depth="$GIT_DEPTH"} --branch "$GITHUB_BRANCH" "https://github.com/$GITHUB_REPO" "$CLONE_DIR"; then
-        send_notification "Success" "Cloned $GITHUB_REPO"
-        exit 0
-      fi
+      CMD="$CMD --dir=\"$DIRPATH\" -o \"$OUTFILE\" \"$URL\""
+    fi
+
+    [ -n "$GITHUB_TOKEN" ] && CMD="$CMD --header=\"Authorization: token $GITHUB_TOKEN\""
+
+    # EXTRA_ARGS is newline-delimited; append each entry quoted.
+    if [ -n "$EXTRA_ARGS" ]; then
+      OLDIFS="$IFS"
+      IFS='
+'
+      for a in $EXTRA_ARGS; do
+        [ -n "$a" ] && CMD="$CMD \"$a\""
+      done
+      IFS="$OLDIFS"
+    fi
+
+    echo "Attempt $ATTEMPT (aria2c)..." | tee -a "$LOGFILE"
+    if eval "$CMD"; then
+      send_notification "Success" "Downloaded $URL"
+      exit 0
     fi
   fi
- 
-elif [[ "$USE_ZSYNC" == "true" ]]; then
-  echo "Attempt $ATTEMPT (zsync)..." | tee -a "$LOGFILE"
-  ZSYNC_ARGS=()
-  [[ "$ZSYNC_UPDATE" == "true" ]] && [[ -n "$ZSYNC_OLD_VERSION" ]] && ZSYNC_ARGS+=(-i "$ZSYNC_OLD_VERSION")
-  ZSYNC_ARGS+=(-o "$DIRPATH/$OUTFILE")
-  ZSYNC_CMD=("$ZSYNC")
-  if [[ "$ZSYNC_SPEED_LIMITS" == "true" ]] && [[ -n "$TRICKLE" ]] && [[ -x "$TRICKLE" ]]; then
-    ZSYNC_CMD=("$TRICKLE" -d "$(to_kbps "$DOWNLOAD_LIMIT")" -u "$(to_kbps "$UPLOAD_LIMIT")" "$ZSYNC")
-  fi
-  if "${ZSYNC_CMD[@]}" "${ZSYNC_ARGS[@]}" "$URL"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-
-elif [[ "$USE_LFTP" == "true" ]]; then
-  echo "Attempt $ATTEMPT (lftp)..." | tee -a "$LOGFILE"
-  LFTP_RATE=""
-  [[ "$LFTP_SPEED_LIMITS" == "true" ]] && LFTP_RATE="set net:limit-rate $(to_kbps "$DOWNLOAD_LIMIT")k:$(to_kbps "$UPLOAD_LIMIT")k;"
-  if "$LFTP" -e "${LFTP_RATE}pget -n $STREAMS '$URL' -o '$DIRPATH/$OUTFILE'; quit"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-
-elif [[ "$USE_TRANSMISSION" == "true" ]]; then
-  echo "Attempt $ATTEMPT (transmission-remote)..." | tee -a "$LOGFILE"
-  TRANS_ARGS=("$TRANSMISSION_HOST")
-  [[ -n "$TRANSMISSION_AUTH" ]] && TRANS_ARGS+=(--auth "$TRANSMISSION_AUTH")
-  [[ "$TRANSMISSION_SPEED_LIMITS" == "true" ]] && \
-    TRANS_ARGS+=(--downlimit "$(to_kbps "$DOWNLOAD_LIMIT")" --uplimit "$(to_kbps "$UPLOAD_LIMIT")")
-  TRANS_ARGS+=(--add "$URL" --download-dir "$DIRPATH")
-  if "$TRANSMISSION" "${TRANS_ARGS[@]}"; then
-    send_notification "Success" "Queued $URL in transmission"
-    exit 0
-  fi
-
-elif [[ "$USE_CURL" == "true" ]]; then
-  echo "Attempt $ATTEMPT (curl)..." | tee -a "$LOGFILE"
-  CURL_LIMITS=()
-  [[ "$CURL_SPEED_LIMITS" == "true" ]] && CURL_LIMITS+=(--limit-rate "$(to_kbps "$DOWNLOAD_LIMIT")K")
-  if "$CURL" -L "${CURL_LIMITS[@]}" ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} --output "$DIRPATH/$OUTFILE" "$URL"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-
-elif [[ "$USE_WGET" == "true" ]]; then
-  echo "Attempt $ATTEMPT (wget)..." | tee -a "$LOGFILE"
-  WGET_LIMITS=()
-  [[ "$WGET_SPEED_LIMITS" == "true" ]] && WGET_LIMITS+=(--limit-rate="$(to_kbps "$DOWNLOAD_LIMIT")K")
-  if "$WGET" "${WGET_LIMITS[@]}" ${GITHUB_TOKEN:+--header="Authorization: token $GITHUB_TOKEN"} -O "$DIRPATH/$OUTFILE" "$URL"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-
-elif [[ "$USE_SURGE" == "true" ]] || \
-    ( [[ "$USE_ARIA2" != "true" ]] && [[ "$DOWNLOAD_ALL" != "true" ]] && \
-    [[ "$URL" == http://* || "$URL" == https://* ]] && \
-    [[ "$URL" != *"api.github.com"* ]] && \
-    [[ -n "$SURGE" ]] && [[ -x "$SURGE" ]] ); then
-  echo "Attempt $ATTEMPT (surge)..." | tee -a "$LOGFILE"
-  if "$SURGE" "$URL" -o "$DIRPATH/$OUTFILE" --exit-when-done; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-
-else
-  CMD=("$ARIA2C" -x "$STREAMS" -s "$STREAMS" --max-tries="$MAX_TRIES_INSIDE_ARIA2C" \
-        --retry-wait="$RETRY_WAIT" --timeout="$TIMEOUT" --check-certificate="$CHECK_CERT" \
-        --save-session="$SESSION_FILE" --save-session-interval="$SAVING_INTERVAL" \
-        --allow-overwrite="$ALLOW_OVERWRITE" --file-allocation="$FILE_ALLOCATION")
-  [[ "$ARIA2_SPEED_LIMITS" == "true" ]] && CMD+=(--max-overall-download-limit="$DOWNLOAD_LIMIT" --max-overall-upload-limit="$UPLOAD_LIMIT")
-  
-  CMD+=(--min-split-size="$BUFFER_SIZE")
-
-  if [[ "$DOWNLOAD_ALL" == "true" ]]; then
-    INPUT_FILE="$DIRPATH/crawl.txt"
-    build_aria2_input "$URL" "$DIRPATH" "$INPUT_FILE"
-    CMD+=(--input-file="$INPUT_FILE")
-  else
-    CMD+=(--dir="$DIRPATH" -o "$OUTFILE" "$URL")
-  fi
-
-  [[ -n "$GITHUB_TOKEN" ]] && CMD+=(--header="Authorization: token $GITHUB_TOKEN")
-  CMD+=("${EXTRA_ARGS[@]}")
-  echo "Attempt $ATTEMPT (aria2c)..." | tee -a "$LOGFILE"
-  if "${CMD[@]}"; then
-    send_notification "Success" "Downloaded $URL"
-    exit 0
-  fi
-fi
   sleep 2
 done
 
