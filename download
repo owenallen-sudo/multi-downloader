@@ -335,7 +335,7 @@ set net:socket-buffer $(to_kbps "$BUFFER_SIZE")
 set pget:default-n $STREAMS
 set ftp:use-mdtm yes
 set net:reconnect-interval-base 5
-set net:max-retries 3
+set net:max-retries 5
 EOF
 
 [ -n "$GITHUB_REPO" ] && URL="https://api.github.com/repos/$GITHUB_REPO/zipball/$GITHUB_BRANCH"

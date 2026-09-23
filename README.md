@@ -1,6 +1,6 @@
 # download
 
-A POSIX-compliant wrapper for downloading files using multiple tools with persistent config, retries, directory crawling, GitHub support, torrent support, zsync delta updates, and custom flag aliases. Licensed under the Mozilla Public License V. 2.0.
+A POSIX-compliant wrapper for downloading files using multiple tools with persistent config, retries, directory crawling, torrent support, zsync delta updates, and custom flag aliases. Licensed under the Mozilla Public License V. 2.0. This project has been moved off of GitHub and onto gitbuild.dev; see https://git.gitbuild.dev/owenallen-sudo/multi-downloader.
 
 ## What it does
 
@@ -33,8 +33,7 @@ You can skip any one of these tools and get full functionality for everything el
 | `git` | Optional | GitHub repo cloning via `--use-git` or `--github-default=git` |
 | `trickle` | Optional | Speed limiting for git and zsync (no native speed limit) |
 | `jq` | Optional | Syncing connection count to surge's config |
-| `aria2` | Optional | Metalink support |
-
+| `aria2` | Optional | Native metalink support
 
 ---
 
@@ -200,7 +199,7 @@ Useful for keeping Linux ISOs up to date without downloading the full image each
 
 | Flag | Description |
 |------|-------------|
-| `--curl-path=<path>` | Path to curl binary |
+| `--curl-path=<path>` | Path to curl downloadbinary |
 | `--wget-path=<path>` | Path to wget binary |
 | `--aria2-path=<path>` | Path to aria2c binary |
 | `--surge-path=<path>` | Path to surge binary |
@@ -238,7 +237,7 @@ Stored at `~/.config/download/config`. Most settings persist between runs includ
 ## Custom Flags
 
 Add shorthand aliases for any aria2c flag:
-
+download
 ```bash
 download addflag fast for --min-split-size=1M
 download <URL> fast
