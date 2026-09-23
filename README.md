@@ -1,6 +1,6 @@
 # download
 
-A POSIX-compliant wrapper for downloading files using multiple tools with persistent config, retries, directory crawling, GitHub support, torrent support, zsync delta updates, and custom flag aliases. Licensed under the Mozilla Public License V. 2.0.
+A POSIX-compliant wrapper for downloading files using multiple tools with persistent config, retries, directory crawling, GitHub support, torrent support, zsync delta updates, and custom flag aliases. Licensed under the Mozilla Public License V. 2.0. This project has been moved off of GitHub and onto gitbuild.dev; see https://git.gitbuild.dev/owenallen-sudo/multi-downloader
 
 ## What it does
 
