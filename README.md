@@ -20,8 +20,8 @@ All `--use-*` flags override automatic detection for edge cases or personal pref
 ---
 
 ## Dependencies
-You can skip any one of these tools and get full functionality for everything else
 
+You can skip any one of these tools and get full functionality for everything else.
 | Tool | Required? | Used For |
 |------|-----------|----------|
 | `surge` | Recommended | Fast HTTP/HTTPS downloads (default for http/https) |
@@ -199,7 +199,7 @@ Useful for keeping Linux ISOs up to date without downloading the full image each
 
 | Flag | Description |
 |------|-------------|
-| `--curl-path=<path>` | Path to curl binary |
+| `--curl-path=<path>` | Path to curl downloadbinary |
 | `--wget-path=<path>` | Path to wget binary |
 | `--aria2-path=<path>` | Path to aria2c binary |
 | `--surge-path=<path>` | Path to surge binary |
@@ -237,7 +237,7 @@ Stored at `~/.config/download/config`. Most settings persist between runs includ
 ## Custom Flags
 
 Add shorthand aliases for any aria2c flag:
-
+download
 ```bash
 download addflag fast for --min-split-size=1M
 download <URL> fast
